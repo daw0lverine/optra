@@ -419,8 +419,8 @@ function MarketDataTable({ data, type }) {
 
 // Chart component with Bloomberg styling
 function Chart({ data, ticker }) {
-  const [activeInterval, setActiveInterval] = useState('1D');
   const chartRef = useRef(null);
+  const activeInterval = '1D'; // Default interval
   
   useEffect(() => {
     if (data && data.length > 0 && chartRef.current) {
@@ -562,7 +562,6 @@ function Chart({ data, ticker }) {
             <div 
               key={interval}
               className={`bloomberg-chart-interval ${interval === activeInterval ? 'active' : ''}`}
-              onClick={() => setActiveInterval(interval)}
             >
               {interval}
             </div>
