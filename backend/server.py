@@ -183,7 +183,16 @@ async def get_layouts():
 async def get_layout(layout_id: str):
     layout = db.layouts.find_one({"id": layout_id})
     if not layout:
+        # Try with ObjectId if string ID doesn't match
+        layouts = list(db.layouts.find({}))
+        for l in layouts:
+            if str(l.get("_id")) == layout_id or l.get("id") == layout_id:
+                layout = l
+                break
+                
+    if not layout:
         raise HTTPException(status_code=404, detail="Layout not found")
+    
     layout["_id"] = str(layout["_id"])
     return layout
 
@@ -191,6 +200,13 @@ async def get_layout(layout_id: str):
 async def delete_layout(layout_id: str):
     result = db.layouts.delete_one({"id": layout_id})
     if result.deleted_count == 0:
+        # Try with ObjectId if string ID doesn't match
+        layouts = list(db.layouts.find({}))
+        for l in layouts:
+            if str(l.get("_id")) == layout_id or l.get("id") == layout_id:
+                db.layouts.delete_one({"_id": l.get("_id")})
+                return {"status": "success", "message": "Layout deleted"}
+                
         raise HTTPException(status_code=404, detail="Layout not found")
     return {"status": "success", "message": "Layout deleted"}
 
