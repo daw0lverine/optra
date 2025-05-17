@@ -320,37 +320,40 @@ function MinimizedWindow({ window, onRestore }) {
   );
 }
 
-// MarketDataTable component
+// MarketDataTable component with Bloomberg styling
 function MarketDataTable({ data, type }) {
   // Customize columns based on type
   const getColumns = () => {
     if (type === 'macro') {
       return [
-        { key: 'ticker', label: 'Ticker' },
-        { key: 'price', label: 'Price' },
-        { key: 'change', label: 'Change' },
-        { key: 'changePct', label: 'Change %' },
-        { key: 'day', label: 'Day' },
-        { key: 'week', label: 'Week' },
-        { key: 'month', label: 'Month' },
-        { key: 'ytd', label: 'YTD' }
+        { key: 'ticker', label: 'TICKER', align: 'left' },
+        { key: 'price', label: 'LAST', align: 'right' },
+        { key: 'change', label: 'CHG', align: 'right' },
+        { key: 'changePct', label: 'CHG %', align: 'right' },
+        { key: 'day', label: '1D %', align: 'right' },
+        { key: 'week', label: '1W %', align: 'right' },
+        { key: 'month', label: '1M %', align: 'right' },
+        { key: 'ytd', label: 'YTD %', align: 'right' }
       ];
     } else if (type === 'sector') {
       return [
-        { key: 'ticker', label: 'Ticker' },
-        { key: 'name', label: 'Name' },
-        { key: 'price', label: 'Price' },
-        { key: 'change', label: 'Change' },
-        { key: 'changePct', label: 'Change %' }
+        { key: 'ticker', label: 'TICKER', align: 'left' },
+        { key: 'name', label: 'NAME', align: 'left' },
+        { key: 'price', label: 'LAST', align: 'right' },
+        { key: 'change', label: 'CHG', align: 'right' },
+        { key: 'changePct', label: 'CHG %', align: 'right' },
+        { key: 'day', label: '1D %', align: 'right' },
+        { key: 'week', label: '1W %', align: 'right' },
+        { key: 'month', label: '1M %', align: 'right' }
       ];
     }
     
     // Default columns
     return [
-      { key: 'ticker', label: 'Ticker' },
-      { key: 'price', label: 'Price' },
-      { key: 'change', label: 'Change' },
-      { key: 'changePct', label: 'Change %' }
+      { key: 'ticker', label: 'TICKER', align: 'left' },
+      { key: 'price', label: 'LAST', align: 'right' },
+      { key: 'change', label: 'CHG', align: 'right' },
+      { key: 'changePct', label: 'CHG %', align: 'right' }
     ];
   };
   
@@ -358,6 +361,8 @@ function MarketDataTable({ data, type }) {
   
   // Format number with color based on sign
   const formatNumber = (value, pct = false) => {
+    if (value === undefined || value === null) return '-';
+    
     const formatted = pct 
       ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}%` 
       : `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
@@ -368,33 +373,46 @@ function MarketDataTable({ data, type }) {
   };
   
   return (
-    <div className="optra-grid-container">
-      <table className="optra-grid">
-        <thead>
-          <tr>
-            {columns.map(col => (
-              <th key={col.key}>{col.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, index) => (
-            <tr key={index}>
+    <div className="bloomberg-section">
+      <div className="bloomberg-section-header">
+        <div className="bloomberg-section-title">{type === 'macro' ? 'MACRO MARKETS' : type === 'sector' ? (type === 'asia' ? 'ASIA MARKETS' : 'US MARKETS') : 'MARKETS'}</div>
+        <div className="bloomberg-section-actions">
+          <span className="bloomberg-section-action">⟳</span>
+          <span className="bloomberg-section-action">⋮</span>
+        </div>
+      </div>
+      <div className="bloomberg-grid-container">
+        <table className="bloomberg-grid">
+          <thead>
+            <tr>
               {columns.map(col => (
-                <td key={col.key}>
-                  {col.key === 'ticker' || col.key === 'name'
-                    ? row[col.key]
-                    : col.key === 'price'
-                      ? row[col.key]?.toFixed(2)
-                      : col.key === 'changePct'
-                        ? formatNumber(row[col.key], true)
-                        : formatNumber(row[col.key])}
-                </td>
+                <th key={col.key} className={col.align === 'left' ? 'left-align' : ''}>
+                  {col.label}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {data.map((row, index) => (
+              <tr key={index}>
+                {columns.map(col => {
+                  if (col.key === 'ticker') {
+                    return <td key={col.key} className="left-align">{row[col.key]}</td>;
+                  } else if (col.key === 'name') {
+                    return <td key={col.key} className="left-align" style={{color: '#e0e0e0'}}>{row[col.key]}</td>;
+                  } else if (col.key === 'price') {
+                    return <td key={col.key}>{row[col.key]?.toFixed(2)}</td>;
+                  } else if (col.key === 'changePct' || col.key === 'day' || col.key === 'week' || col.key === 'month' || col.key === 'ytd') {
+                    return <td key={col.key}>{formatNumber(row[col.key], true)}</td>;
+                  } else {
+                    return <td key={col.key}>{formatNumber(row[col.key])}</td>;
+                  }
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
