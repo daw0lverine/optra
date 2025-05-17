@@ -345,25 +345,48 @@ async def get_history(
 @app.get("/api/market/search/{query}")
 async def search_tickers(query: str):
     try:
-        # Simple search using yfinance (limited capabilities)
-        tickers = yf.Tickers(query)
-        results = []
+        # Mock search results
+        tech_companies = [
+            {"symbol": "AAPL", "name": "Apple Inc.", "exchange": "NASDAQ", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "MSFT", "name": "Microsoft Corporation", "exchange": "NASDAQ", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "GOOGL", "name": "Alphabet Inc.", "exchange": "NASDAQ", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "AMZN", "name": "Amazon.com Inc.", "exchange": "NASDAQ", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "META", "name": "Meta Platforms Inc.", "exchange": "NASDAQ", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "TSLA", "name": "Tesla Inc.", "exchange": "NASDAQ", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "NVDA", "name": "NVIDIA Corporation", "exchange": "NASDAQ", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "NFLX", "name": "Netflix Inc.", "exchange": "NASDAQ", "type": "EQUITY", "currency": "USD"}
+        ]
         
-        for ticker_symbol in tickers.tickers:
-            try:
-                ticker = tickers.tickers[ticker_symbol]
-                info = ticker.info
-                
-                results.append({
-                    "symbol": ticker_symbol,
-                    "name": info.get("shortName", ""),
-                    "exchange": info.get("exchange", ""),
-                    "type": info.get("quoteType", ""),
-                    "currency": info.get("currency", "USD")
-                })
-            except:
-                # Skip tickers that fail to load
-                pass
+        finance_companies = [
+            {"symbol": "JPM", "name": "JPMorgan Chase & Co.", "exchange": "NYSE", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "BAC", "name": "Bank of America Corporation", "exchange": "NYSE", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "WFC", "name": "Wells Fargo & Company", "exchange": "NYSE", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "C", "name": "Citigroup Inc.", "exchange": "NYSE", "type": "EQUITY", "currency": "USD"},
+            {"symbol": "GS", "name": "Goldman Sachs Group Inc.", "exchange": "NYSE", "type": "EQUITY", "currency": "USD"}
+        ]
+        
+        indices = [
+            {"symbol": "^GSPC", "name": "S&P 500", "exchange": "SNP", "type": "INDEX", "currency": "USD"},
+            {"symbol": "^DJI", "name": "Dow Jones Industrial Average", "exchange": "DJI", "type": "INDEX", "currency": "USD"},
+            {"symbol": "^IXIC", "name": "NASDAQ Composite", "exchange": "NASDAQ", "type": "INDEX", "currency": "USD"},
+            {"symbol": "^N225", "name": "Nikkei 225", "exchange": "Osaka", "type": "INDEX", "currency": "JPY"}
+        ]
+        
+        forex = [
+            {"symbol": "EURUSD=X", "name": "EUR/USD", "exchange": "CCY", "type": "CURRENCY", "currency": "USD"},
+            {"symbol": "GBPUSD=X", "name": "GBP/USD", "exchange": "CCY", "type": "CURRENCY", "currency": "USD"},
+            {"symbol": "USDJPY=X", "name": "USD/JPY", "exchange": "CCY", "type": "CURRENCY", "currency": "JPY"}
+        ]
+        
+        # Combine all results
+        all_results = tech_companies + finance_companies + indices + forex
+        
+        # Filter based on query
+        query = query.upper()
+        results = [r for r in all_results if query in r["symbol"].upper() or query in r["name"].upper()]
+        
+        # Limit results
+        results = results[:10]
                 
         return {"results": results}
     except Exception as e:
