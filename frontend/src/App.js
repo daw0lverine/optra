@@ -585,11 +585,12 @@ function Chart({ data, ticker }) {
   );
 }
 
-// LogViewer component
+// LogViewer component with Bloomberg styling
 function LogViewer() {
   const [logs, setLogs] = useState([]);
   const [filter, setFilter] = useState({ level: '', source: '' });
   const [isLive, setIsLive] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Fetch logs on mount
   useEffect(() => {
@@ -600,7 +601,7 @@ function LogViewer() {
       if (isLive) {
         fetchLogs();
       }
-    }, 5000);
+    }, 3000); // More frequent updates
     
     return () => clearInterval(interval);
   }, [isLive, filter]);
@@ -611,6 +612,7 @@ function LogViewer() {
       const queryParams = new URLSearchParams();
       if (filter.level) queryParams.append('level', filter.level);
       if (filter.source) queryParams.append('source', filter.source);
+      queryParams.append('limit', '100'); // Get more logs
       
       const response = await fetch(`${BACKEND_URL}/logs?${queryParams.toString()}`);
       const data = await response.json();
@@ -622,83 +624,107 @@ function LogViewer() {
   
   // Log level badge with color
   const LogLevelBadge = ({ level }) => {
-    const colorMap = {
-      ERROR: 'bg-red-600',
-      WARNING: 'bg-yellow-500',
-      INFO: 'bg-blue-500',
-      DEBUG: 'bg-gray-500'
-    };
-    
-    return (
-      <span className={`px-2 py-1 rounded text-xs ${colorMap[level] || 'bg-gray-500'}`}>
-        {level}
-      </span>
-    );
+    const className = `log-level-badge log-level-${level.toLowerCase()}`;
+    return <span className={className}>{level}</span>;
   };
   
+  // Filter logs by search term
+  const filteredLogs = logs.filter(log => {
+    if (!searchTerm) return true;
+    return (
+      log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.source.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.stack_trace && log.stack_trace.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  });
+  
   return (
-    <div className="optra-log-viewer">
-      <div className="optra-log-controls">
-        <div className="flex space-x-4 mb-4">
-          <select 
-            value={filter.level} 
-            onChange={e => setFilter({...filter, level: e.target.value})}
-            className="bg-optra-darker border border-optra-light rounded px-2 py-1"
-          >
-            <option value="">All Levels</option>
-            <option value="ERROR">Error</option>
-            <option value="WARNING">Warning</option>
-            <option value="INFO">Info</option>
-            <option value="DEBUG">Debug</option>
-          </select>
+    <div className="log-viewer-container">
+      <div className="log-viewer-header">
+        <div className="log-viewer-controls">
+          <div className="log-viewer-control">
+            <select 
+              value={filter.level} 
+              onChange={e => setFilter({...filter, level: e.target.value})}
+            >
+              <option value="">All Levels</option>
+              <option value="INFO">Info</option>
+              <option value="WARNING">Warning</option>
+              <option value="ERROR">Error</option>
+              <option value="DEBUG">Debug</option>
+            </select>
+          </div>
           
-          <select 
-            value={filter.source} 
-            onChange={e => setFilter({...filter, source: e.target.value})}
-            className="bg-optra-darker border border-optra-light rounded px-2 py-1"
-          >
-            <option value="">All Sources</option>
-            <option value="system">System</option>
-            <option value="market_api">Market API</option>
-            <option value="user">User</option>
-          </select>
+          <div className="log-viewer-control">
+            <select 
+              value={filter.source} 
+              onChange={e => setFilter({...filter, source: e.target.value})}
+            >
+              <option value="">All Sources</option>
+              <option value="system">System</option>
+              <option value="market_api">Market API</option>
+              <option value="user_interface">UI</option>
+              <option value="database">Database</option>
+              <option value="authentication">Auth</option>
+              <option value="data_processor">Data</option>
+            </select>
+          </div>
           
           <button 
+            className={`log-viewer-button ${isLive ? 'active' : ''}`}
             onClick={() => setIsLive(!isLive)}
-            className={`px-3 py-1 rounded ${isLive ? 'bg-optra-green' : 'bg-optra-dark border border-optra-light'}`}
           >
             {isLive ? 'Live' : 'Paused'}
           </button>
           
           <button 
+            className="log-viewer-button"
             onClick={fetchLogs}
-            className="bg-optra-blue px-3 py-1 rounded"
           >
             Refresh
           </button>
+          
+          <div className="log-viewer-search">
+            <span className="log-viewer-search-icon">🔎</span>
+            <input
+              type="text"
+              placeholder="Search logs..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+          </div>
         </div>
       </div>
       
-      <div className="optra-log-list">
-        {logs.map(log => (
-          <div key={log._id} className="optra-log-entry border-b border-optra-dark py-2">
-            <div className="flex justify-between items-center mb-1">
-              <div className="flex items-center space-x-2">
-                <LogLevelBadge level={log.level} />
-                <span className="text-optra-light">{log.source}</span>
+      <div className="log-viewer-body">
+        {filteredLogs.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">No logs found</div>
+        ) : (
+          filteredLogs.map(log => (
+            <div key={log._id} className="log-entry">
+              <div className="log-entry-header">
+                <div className="flex items-center">
+                  <LogLevelBadge level={log.level} />
+                  <span className="log-entry-source">{log.source}</span>
+                </div>
+                <span className="log-entry-time">
+                  {new Date(log.timestamp).toLocaleString()}
+                </span>
               </div>
-              <span className="text-xs text-gray-400">
-                {new Date(log.timestamp).toLocaleString()}
-              </span>
+              <div className="log-entry-message">{log.message}</div>
+              {log.stack_trace && (
+                <div className="log-entry-details">
+                  {log.stack_trace}
+                </div>
+              )}
+              {log.additional_data && (
+                <div className="log-entry-details">
+                  {JSON.stringify(log.additional_data, null, 2)}
+                </div>
+              )}
             </div>
-            <div className="text-optra-light">{log.message}</div>
-            {log.stack_trace && (
-              <pre className="text-xs bg-optra-darker p-2 mt-1 rounded overflow-x-auto">
-                {log.stack_trace}
-              </pre>
-            )}
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
