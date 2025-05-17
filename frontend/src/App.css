@@ -49,42 +49,225 @@
   border-radius: 4px;
 }
 
-/* Utility classes */
-.positive {
-  color: #4cd964;
-}
-
-.negative {
-  color: #ff3b30;
-}
-
-/* Main menu dropdown styles */
-.optra-main-menu-item {
-  position: relative;
-}
-
-.optra-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 200px;
-  background-color: #2d3035;
-  border: 1px solid #4c5058;
-  border-radius: 4px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+/* Window management */
+.optra-minimized-windows {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
   z-index: 1000;
-  display: none;
 }
 
-.optra-main-menu-item:hover .optra-dropdown {
-  display: block;
-}
-
-.optra-dropdown-item {
-  padding: 8px 16px;
+.optra-minimized-window {
+  width: 120px;
+  height: 80px;
+  background-color: #2d3035;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
   cursor: pointer;
 }
 
-.optra-dropdown-item:hover {
+.optra-minimized-window:hover {
+  transform: scale(1.05);
+}
+
+.optra-minimized-title {
+  padding: 4px 8px;
+  font-size: 10px;
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.optra-window-tabbed {
+  display: flex;
+  flex-direction: column;
+}
+
+.optra-window-tabs {
+  display: flex;
+  background-color: #2d3035;
+  border-bottom: 1px solid #4c5058;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.optra-window-tabs::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.optra-window-tab {
+  padding: 5px 12px;
+  font-size: 12px;
+  border-right: 1px solid #4c5058;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+.optra-window-tab.active {
   background-color: #3a3f46;
+  border-bottom: 2px solid #3a86ff;
+}
+
+.optra-window-tab-close {
+  margin-left: 8px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.optra-window-tab-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.optra-window-tab-add {
+  padding: 5px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.optra-ghost-window {
+  position: absolute;
+  background-color: rgba(58, 134, 255, 0.2);
+  border: 2px solid rgba(58, 134, 255, 0.5);
+  border-radius: 6px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Snapping guide overlay */
+.optra-snap-guide {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9998;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.optra-snap-guide.active {
+  opacity: 1;
+}
+
+.optra-snap-zone {
+  position: absolute;
+  background-color: rgba(58, 134, 255, 0.15);
+  border: 1px solid rgba(58, 134, 255, 0.3);
+}
+
+.optra-snap-zone-left {
+  top: 24px;
+  left: 0;
+  width: 50%;
+  height: calc(100% - 24px);
+}
+
+.optra-snap-zone-right {
+  top: 24px;
+  right: 0;
+  width: 50%;
+  height: calc(100% - 24px);
+}
+
+.optra-snap-zone-top {
+  top: 24px;
+  left: 0;
+  width: 100%;
+  height: calc(50% - 12px);
+}
+
+.optra-snap-zone-bottom {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+}
+
+.optra-snap-zone-full {
+  top: 24px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 24px);
+}
+
+/* Tab group system */
+.optra-tab-group {
+  border: 1px solid #2d3035;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #1a1d21;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.optra-tab-group-header {
+  display: flex;
+  background-color: #2d3035;
+  min-height: 30px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.optra-tab-group-header::-webkit-scrollbar {
+  display: none;
+}
+
+.optra-tab-group-content {
+  flex: 1;
+  overflow: auto;
+}
+
+/* Dock container */
+.optra-dock-container {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background-color: rgba(45, 48, 53, 0.7);
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+.optra-dock-item {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #3a3f46;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.optra-dock-item:hover {
+  transform: scale(1.1);
+  background-color: #4c5058;
+}
+
+.optra-dock-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  width: 5px;
+  height: 5px;
+  background-color: #3a86ff;
+  border-radius: 50%;
 }

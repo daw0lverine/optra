@@ -16,24 +16,164 @@ code {
   font-family: 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
 }
 
+/* macOS-like Menu Bar */
+.optra-menu-bar {
+  background-color: rgba(45, 48, 53, 0.95);
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #3a3f46;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  position: relative;
+}
+
+.optra-menu-logo {
+  font-weight: 600;
+  font-size: 13px;
+  margin-right: 20px;
+}
+
+.optra-menu-item {
+  font-size: 12px;
+  color: #e0e0e0;
+  padding: 0 10px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  cursor: default;
+  position: relative;
+}
+
+.optra-menu-item:hover {
+  background-color: #3a3f46;
+}
+
+.optra-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background-color: rgba(45, 48, 53, 0.98);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid #4c5058;
+  border-radius: 5px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.optra-menu-item:hover .optra-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.optra-dropdown-item {
+  padding: 5px 15px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  cursor: default;
+  min-height: 25px;
+  position: relative;
+}
+
+.optra-dropdown-item:hover {
+  background-color: #3a86ff;
+  color: white;
+}
+
+.optra-dropdown-divider {
+  height: 1px;
+  background-color: #4c5058;
+  margin: 5px 0;
+}
+
+.optra-dropdown-shortcut {
+  margin-left: auto;
+  color: #a0a0a0;
+  font-size: 11px;
+}
+
+.optra-dropdown-item:hover .optra-dropdown-shortcut {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 /* Custom Window Styles */
 .optra-window {
   background-color: #1a1d21;
   border: 1px solid #2d3035;
-  border-radius: 6px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
   overflow: hidden;
-  transition: box-shadow 0.2s ease;
+  transition: all 0.2s ease;
+  position: absolute;
 }
 
 .optra-window.active {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   border-color: #4c5058;
+  z-index: 1000 !important;
+}
+
+.optra-window.minimized {
+  transform: scale(0.1);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.optra-window.maximized {
+  top: 24px !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: calc(100vh - 24px) !important;
+  border-radius: 0;
+}
+
+.optra-window.snapped-left {
+  top: 24px !important;
+  left: 0 !important;
+  width: 50vw !important;
+  height: calc(100vh - 24px) !important;
+  border-radius: 0;
+}
+
+.optra-window.snapped-right {
+  top: 24px !important;
+  left: 50vw !important;
+  width: 50vw !important;
+  height: calc(100vh - 24px) !important;
+  border-radius: 0;
+}
+
+.optra-window.snapped-top {
+  top: 24px !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: calc(50vh - 12px) !important;
+  border-radius: 0;
+}
+
+.optra-window.snapped-bottom {
+  top: calc(50vh + 12px) !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: calc(50vh - 12px) !important;
+  border-radius: 0;
 }
 
 .optra-window-header {
   background-color: #2d3035;
-  height: 36px;
+  height: 28px;
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -43,17 +183,20 @@ code {
 
 .optra-window-title {
   flex: 1;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: #e0e0e0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: center;
 }
 
 .optra-window-controls {
   display: flex;
   gap: 8px;
+  position: absolute;
+  left: 12px;
 }
 
 .optra-window-control {
@@ -62,6 +205,27 @@ code {
   border-radius: 50%;
   border: none;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 9px;
+  font-weight: bold;
+}
+
+.optra-window-control svg {
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  width: 8px;
+  height: 8px;
+}
+
+.optra-window:hover .optra-window-control svg {
+  opacity: 0.7;
+}
+
+.optra-window-control:hover svg {
+  opacity: 1 !important;
 }
 
 .optra-window-close {
@@ -76,11 +240,197 @@ code {
   background-color: #4cd964;
 }
 
+.optra-window-snap-indicator {
+  position: fixed;
+  background-color: rgba(58, 134, 255, 0.2);
+  border: 2px solid rgba(58, 134, 255, 0.5);
+  z-index: 9999;
+  pointer-events: none;
+  transition: all 0.15s ease;
+  border-radius: 8px;
+}
+
+/* Tab container styles */
+.optra-tab-container {
+  background-color: #1a1d21;
+  border-bottom: 1px solid #2d3035;
+  display: flex;
+  height: 30px;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.optra-tab-container::-webkit-scrollbar {
+  display: none;
+}
+
+.optra-tab {
+  padding: 0 16px;
+  height: 100%;
+  cursor: pointer;
+  border-right: 1px solid #2d3035;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  transition: background-color 0.2s ease;
+  min-width: 100px;
+  position: relative;
+}
+
+.optra-tab.active {
+  background-color: #2d3035;
+}
+
+.optra-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #3a86ff;
+}
+
+.optra-tab:hover:not(.active) {
+  background-color: #212327;
+}
+
+.optra-tab-close {
+  margin-left: 8px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.optra-tab:hover .optra-tab-close {
+  opacity: 0.6;
+}
+
+.optra-tab-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  opacity: 1 !important;
+}
+
+.optra-tab-add {
+  width: 30px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  color: #a0a0a0;
+  transition: color 0.2s ease;
+}
+
+.optra-tab-add:hover {
+  color: #e0e0e0;
+}
+
+/* Window dock */
+.optra-dock {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  background-color: rgba(45, 48, 53, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 8px;
+  gap: 8px;
+  z-index: 1000;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.optra-dock-item {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background-color: #3a3f46;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.optra-dock-item:hover {
+  transform: scale(1.1);
+}
+
+.optra-dock-item.active::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: #3a86ff;
+}
+
+.optra-dock-item svg {
+  width: 24px;
+  height: 24px;
+  color: #e0e0e0;
+}
+
+/* Minimized windows container */
+.optra-minimized-container {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 999;
+}
+
+.optra-minimized-preview {
+  width: 120px;
+  height: 80px;
+  background-color: #2d3035;
+  border-radius: 6px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+  border: 1px solid #4c5058;
+}
+
+.optra-minimized-preview:hover {
+  transform: scale(1.05);
+}
+
+.optra-minimized-title {
+  font-size: 10px;
+  padding: 4px 8px;
+  background-color: #1a1d21;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.optra-minimized-content {
+  height: calc(100% - 22px);
+  background-color: #1a1d21;
+}
+
 /* Grid and Table Styles */
 .optra-grid {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .optra-grid th,
@@ -107,48 +457,116 @@ code {
   color: #ff3b30;
 }
 
-/* Main menu styles */
-.optra-main-menu {
+/* Widget styles */
+.optra-widget {
+  border: 1px solid #2d3035;
+  border-radius: 6px;
+  background-color: #1a1d21;
+  overflow: hidden;
+}
+
+.optra-widget-header {
   background-color: #2d3035;
-  border-bottom: 1px solid #4c5058;
-}
-
-.optra-main-menu-item {
-  padding: 8px 16px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.optra-main-menu-item:hover {
-  background-color: #3a3f46;
-}
-
-.optra-main-menu-item.active {
-  background-color: #3a86ff;
-  color: white;
-}
-
-/* Tab container styles */
-.optra-tabs {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
   display: flex;
-  background-color: #2d3035;
-  border-bottom: 1px solid #4c5058;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.optra-tab {
-  padding: 8px 16px;
+.optra-widget-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.optra-widget-action {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border-right: 1px solid #4c5058;
-  font-size: 13px;
-  transition: background-color 0.2s ease;
+  color: #a0a0a0;
+  transition: color 0.2s ease;
 }
 
-.optra-tab.active {
-  background-color: #3a3f46;
-  border-bottom: 2px solid #3a86ff;
+.optra-widget-action:hover {
+  color: #e0e0e0;
 }
 
-.optra-tab:hover:not(.active) {
-  background-color: #32363d;
+.optra-widget-content {
+  padding: 10px;
+}
+
+/* Resizing handles */
+.optra-resize-handle-e,
+.optra-resize-handle-w,
+.optra-resize-handle-s,
+.optra-resize-handle-n,
+.optra-resize-handle-se,
+.optra-resize-handle-sw,
+.optra-resize-handle-ne,
+.optra-resize-handle-nw {
+  position: absolute;
+  z-index: 10;
+}
+
+.optra-resize-handle-e,
+.optra-resize-handle-w {
+  top: 0;
+  height: 100%;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.optra-resize-handle-s,
+.optra-resize-handle-n {
+  left: 0;
+  width: 100%;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.optra-resize-handle-se,
+.optra-resize-handle-sw,
+.optra-resize-handle-ne,
+.optra-resize-handle-nw {
+  width: 12px;
+  height: 12px;
+}
+
+.optra-resize-handle-e { right: -4px; }
+.optra-resize-handle-w { left: -4px; }
+.optra-resize-handle-s { bottom: -4px; }
+.optra-resize-handle-n { top: -4px; }
+
+.optra-resize-handle-se { 
+  right: -6px; 
+  bottom: -6px; 
+  cursor: nwse-resize; 
+}
+.optra-resize-handle-sw { 
+  left: -6px; 
+  bottom: -6px; 
+  cursor: nesw-resize; 
+}
+.optra-resize-handle-ne { 
+  right: -6px; 
+  top: -6px; 
+  cursor: nesw-resize; 
+}
+.optra-resize-handle-nw { 
+  left: -6px; 
+  top: -6px; 
+  cursor: nwse-resize; 
+}
+
+/* Utility classes */
+.positive {
+  color: #4cd964;
+}
+
+.negative {
+  color: #ff3b30;
 }
