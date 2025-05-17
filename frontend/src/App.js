@@ -759,6 +759,7 @@ function App() {
   
   // Close a window
   const closeWindow = (windowId) => {
+    console.log("Closing window:", windowId);
     setWindows(windows.filter(window => window.id !== windowId));
     
     // Also remove from minimized windows if it's there
