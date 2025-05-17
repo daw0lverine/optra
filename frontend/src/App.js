@@ -90,19 +90,19 @@ function Window({
       const screenHeight = window.innerHeight;
       
       // Snap to left half of screen
-      if (newX < 20 && newY < 100) {
+      if (newX < 30) {
         setSnapZone('left');
       } 
       // Snap to right half of screen
-      else if (newX + windowWidth > screenWidth - 20 && newY < 100) {
+      else if (newX + windowWidth > screenWidth - 30) {
         setSnapZone('right');
       }
       // Snap to top half of screen
-      else if (newY < 20) {
+      else if (newY < 30) {
         setSnapZone('top');
       }
       // Snap to bottom half of screen
-      else if (newY + windowHeight > screenHeight - 20) {
+      else if (newY + windowHeight > screenHeight - 30) {
         setSnapZone('bottom');
       }
       // Maximize when dragging to top
