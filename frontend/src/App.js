@@ -417,14 +417,13 @@ function MarketDataTable({ data, type }) {
   );
 }
 
-// Chart component
+// Chart component with Bloomberg styling
 function Chart({ data, ticker }) {
-  const chartRef = React.useRef(null);
+  const [activeInterval, setActiveInterval] = useState('1D');
+  const chartRef = useRef(null);
   
   useEffect(() => {
     if (data && data.length > 0 && chartRef.current) {
-      // This is a placeholder for chart implementation
-      // We'll typically use a library like Recharts, Chart.js, or D3.js
       const ctx = chartRef.current.getContext('2d');
       
       // Clear canvas
@@ -432,29 +431,53 @@ function Chart({ data, ticker }) {
       
       // Calculate min/max for scaling
       const prices = data.map(d => d.close);
-      const min = Math.min(...prices);
-      const max = Math.max(...prices);
+      const min = Math.min(...prices) * 0.995; // Add some padding
+      const max = Math.max(...prices) * 1.005;
       const range = max - min;
       
       // Draw chart background
-      ctx.fillStyle = '#2d3035';
+      ctx.fillStyle = '#1a1d21';
       ctx.fillRect(0, 0, chartRef.current.width, chartRef.current.height);
       
-      // Draw axes
-      ctx.strokeStyle = '#4c5058';
-      ctx.beginPath();
-      ctx.moveTo(40, 10);
-      ctx.lineTo(40, chartRef.current.height - 30);
-      ctx.lineTo(chartRef.current.width - 10, chartRef.current.height - 30);
-      ctx.stroke();
+      // Draw grid lines
+      ctx.strokeStyle = '#2d3035';
+      ctx.lineWidth = 1;
+      
+      // Vertical grid lines (time)
+      const timeSteps = 6;
+      for (let i = 1; i < timeSteps; i++) {
+        const x = (i / timeSteps) * chartRef.current.width;
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, chartRef.current.height);
+        ctx.stroke();
+      }
+      
+      // Horizontal grid lines (price)
+      const priceSteps = 5;
+      for (let i = 0; i <= priceSteps; i++) {
+        const y = (i / priceSteps) * chartRef.current.height;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(chartRef.current.width, y);
+        ctx.stroke();
+        
+        // Add price labels
+        const price = max - (i / priceSteps) * range;
+        ctx.fillStyle = '#a0a0a0';
+        ctx.font = '10px SF Mono';
+        ctx.textAlign = 'left';
+        ctx.fillText(price.toFixed(2), 5, y - 5);
+      }
       
       // Draw price line
       ctx.strokeStyle = '#ffcc00';
+      ctx.lineWidth = 2;
       ctx.beginPath();
       
       data.forEach((point, i) => {
-        const x = 40 + (i / (data.length - 1)) * (chartRef.current.width - 50);
-        const y = chartRef.current.height - 30 - ((point.close - min) / range) * (chartRef.current.height - 40);
+        const x = (i / (data.length - 1)) * chartRef.current.width;
+        const y = ((max - point.close) / range) * chartRef.current.height;
         
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -465,25 +488,100 @@ function Chart({ data, ticker }) {
       
       ctx.stroke();
       
-      // Draw ticker name
-      ctx.fillStyle = '#e0e0e0';
-      ctx.font = '14px Arial';
-      ctx.fillText(ticker, 10, 20);
+      // Draw price area
+      ctx.fillStyle = 'rgba(255, 204, 0, 0.1)';
+      ctx.beginPath();
       
-      // Draw price
-      const lastPrice = data[data.length - 1].close;
-      ctx.fillText(`$${lastPrice.toFixed(2)}`, 10, 40);
+      // Start from bottom left
+      ctx.moveTo(0, chartRef.current.height);
+      
+      // Draw the same line shape
+      data.forEach((point, i) => {
+        const x = (i / (data.length - 1)) * chartRef.current.width;
+        const y = ((max - point.close) / range) * chartRef.current.height;
+        ctx.lineTo(x, y);
+      });
+      
+      // Complete the shape to bottom right
+      ctx.lineTo(chartRef.current.width, chartRef.current.height);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Draw data points
+      ctx.fillStyle = '#ffcc00';
+      const pointsToShow = 5; // Show fewer points to avoid clutter
+      const step = Math.max(1, Math.floor(data.length / pointsToShow));
+      
+      for (let i = 0; i < data.length; i += step) {
+        const point = data[i];
+        const x = (i / (data.length - 1)) * chartRef.current.width;
+        const y = ((max - point.close) / range) * chartRef.current.height;
+        
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Always show the last point
+      const lastPoint = data[data.length - 1];
+      const x = chartRef.current.width;
+      const y = ((max - lastPoint.close) / range) * chartRef.current.height;
+      
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
     }
   }, [data, ticker]);
   
+  // Calculate change and percentage change
+  const lastPrice = data && data.length > 0 ? data[data.length - 1].close : 0;
+  const firstPrice = data && data.length > 0 ? data[0].open : 0;
+  const change = lastPrice - firstPrice;
+  const changePct = firstPrice !== 0 ? (change / firstPrice) * 100 : 0;
+  
+  const changeClass = change >= 0 ? 'positive' : 'negative';
+  
   return (
-    <div className="optra-chart">
-      <canvas 
-        ref={chartRef} 
-        width="600" 
-        height="400"
-        style={{ width: '100%', height: '100%' }}
-      />
+    <div className="bloomberg-chart">
+      <div className="bloomberg-chart-header">
+        <div className="bloomberg-chart-title">
+          <span className="bloomberg-chart-symbol">{ticker}</span>
+          <span className="bloomberg-chart-details">JPY Curncy</span>
+        </div>
+        <div className="bloomberg-chart-price">
+          <span className="bloomberg-chart-value">{lastPrice.toFixed(2)}</span>
+          <div className="bloomberg-chart-change">
+            <span className={changeClass}>{change >= 0 ? '+' : ''}{change.toFixed(2)}</span>
+            <span className={changeClass}>{change >= 0 ? '+' : ''}{changePct.toFixed(2)}%</span>
+          </div>
+        </div>
+      </div>
+      <div className="bloomberg-chart-toolbar">
+        <div className="bloomberg-chart-intervals">
+          {['1D', '1W', '1M', '3M', '6M', '1Y', 'YTD', 'ALL'].map(interval => (
+            <div 
+              key={interval}
+              className={`bloomberg-chart-interval ${interval === activeInterval ? 'active' : ''}`}
+              onClick={() => setActiveInterval(interval)}
+            >
+              {interval}
+            </div>
+          ))}
+        </div>
+        <div className="bloomberg-chart-actions">
+          <span className="bloomberg-chart-action">⟳</span>
+          <span className="bloomberg-chart-action">⤢</span>
+          <span className="bloomberg-chart-action">⋮</span>
+        </div>
+      </div>
+      <div className="bloomberg-chart-canvas">
+        <canvas 
+          ref={chartRef} 
+          width="600" 
+          height="300"
+          style={{ width: '100%', height: '100%' }}
+        />
+      </div>
     </div>
   );
 }
