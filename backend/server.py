@@ -257,19 +257,63 @@ async def get_history(
     interval: str = "1d"  # 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo
 ):
     try:
-        ticker_obj = yf.Ticker(ticker)
-        history = ticker_obj.history(period=period, interval=interval)
+        # Create mock data for the chart
+        import random
+        from datetime import datetime, timedelta
         
-        # Format the data for the frontend
+        # Generate random price data
+        base_price = 150.0  # Base price
+        volatility = 2.0    # Daily volatility in dollars
+        days = 30           # Number of days to generate
+        
+        if period == "1d":
+            days = 1
+        elif period == "5d":
+            days = 5
+        elif period == "1mo":
+            days = 30
+        elif period == "3mo":
+            days = 90
+        elif period == "6mo":
+            days = 180
+        elif period == "1y":
+            days = 365
+        
+        # Generate data points
         data = []
-        for index, row in history.iterrows():
+        current_date = datetime.now() - timedelta(days=days)
+        price = base_price
+        
+        for i in range(days):
+            current_date += timedelta(days=1)
+            # Random price movement
+            change = (random.random() - 0.5) * volatility
+            price += change
+            
+            # Add some randomness to high/low
+            high = price + random.random() * volatility * 0.5
+            low = price - random.random() * volatility * 0.5
+            
+            # Ensure open is between yesterday's close and today's close
+            if i == 0:
+                open_price = price - change * 0.5
+            else:
+                open_price = price - change * random.random()
+            
+            # Ensure high >= max(open, close) and low <= min(open, close)
+            high = max(high, open_price, price)
+            low = min(low, open_price, price)
+            
+            # Volume has some randomness but trends with price changes
+            volume = int(1000000 + 500000 * abs(change) + random.random() * 500000)
+            
             data.append({
-                "date": index.isoformat(),
-                "open": float(row["Open"]),
-                "high": float(row["High"]),
-                "low": float(row["Low"]),
-                "close": float(row["Close"]),
-                "volume": int(row["Volume"])
+                "date": current_date.isoformat(),
+                "open": round(open_price, 2),
+                "high": round(high, 2),
+                "low": round(low, 2),
+                "close": round(price, 2),
+                "volume": volume
             })
             
         # Log the API call
