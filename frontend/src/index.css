@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: 'SF Pro Text', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #1a1d21;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+code {
+  font-family: 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
+}
+
+/* Custom Window Styles */
+.optra-window {
+  background-color: #1a1d21;
+  border: 1px solid #2d3035;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.optra-window.active {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: #4c5058;
+}
+
+.optra-window-header {
+  background-color: #2d3035;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  cursor: move;
+  user-select: none;
+}
+
+.optra-window-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optra-window-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.optra-window-control {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.optra-window-close {
+  background-color: #ff3b30;
+}
+
+.optra-window-minimize {
+  background-color: #ffcc00;
+}
+
+.optra-window-maximize {
+  background-color: #4cd964;
+}
+
+/* Grid and Table Styles */
+.optra-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.optra-grid th,
+.optra-grid td {
+  padding: 4px 8px;
+  text-align: right;
+  border-bottom: 1px solid #2d3035;
+}
+
+.optra-grid th {
+  background-color: #2d3035;
+  color: #e0e0e0;
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.optra-grid td.positive {
+  color: #4cd964;
+}
+
+.optra-grid td.negative {
+  color: #ff3b30;
+}
+
+/* Main menu styles */
+.optra-main-menu {
+  background-color: #2d3035;
+  border-bottom: 1px solid #4c5058;
+}
+
+.optra-main-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.optra-main-menu-item:hover {
+  background-color: #3a3f46;
+}
+
+.optra-main-menu-item.active {
+  background-color: #3a86ff;
+  color: white;
+}
+
+/* Tab container styles */
+.optra-tabs {
+  display: flex;
+  background-color: #2d3035;
+  border-bottom: 1px solid #4c5058;
+}
+
+.optra-tab {
+  padding: 8px 16px;
+  cursor: pointer;
+  border-right: 1px solid #4c5058;
+  font-size: 13px;
+  transition: background-color 0.2s ease;
+}
+
+.optra-tab.active {
+  background-color: #3a3f46;
+  border-bottom: 2px solid #3a86ff;
+}
+
+.optra-tab:hover:not(.active) {
+  background-color: #32363d;
+}
