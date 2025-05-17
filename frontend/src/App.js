@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import './App.css';
 import { v4 as uuidv4 } from 'uuid';
@@ -20,28 +20,60 @@ function useData() {
 // Backend API URL from environment
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Window component
-function Window({ id, title, children, initialPosition, initialSize, module, onClose }) {
+// Window component with enhanced features
+function Window({ 
+  id, 
+  title, 
+  children, 
+  initialPosition, 
+  initialSize, 
+  module, 
+  onClose,
+  onMinimize,
+  onMaximize,
+  isMaximized,
+  isMinimized,
+  bringToFront 
+}) {
   const [position, setPosition] = useState(initialPosition || { x: 50, y: 50 });
   const [size, setSize] = useState(initialSize || { width: 800, height: 600 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isActive, setIsActive] = useState(true);
+  const [snapZone, setSnapZone] = useState(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeDirection, setResizeDirection] = useState(null);
+  const [resizeStartPos, setResizeStartPos] = useState(null);
+  const [resizeStartSize, setResizeStartSize] = useState(null);
   
   // Refs for DOM elements
-  const windowRef = React.useRef(null);
-  const headerRef = React.useRef(null);
+  const windowRef = useRef(null);
+  const headerRef = useRef(null);
+  
+  // Window state classes
+  const windowClasses = [
+    'optra-window',
+    isActive ? 'active' : '',
+    isMinimized ? 'minimized' : '',
+    isMaximized ? 'maximized' : '',
+    snapZone ? `snapped-${snapZone}` : ''
+  ].filter(Boolean).join(' ');
   
   // Handle window dragging
   const handleMouseDown = (e) => {
     if (headerRef.current && headerRef.current.contains(e.target)) {
+      if (e.target.closest('.optra-window-control')) {
+        // Don't start dragging if clicking on window controls
+        return;
+      }
+      
       setIsDragging(true);
       const rect = windowRef.current.getBoundingClientRect();
       setDragOffset({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
       });
-      setIsActive(true);
+      bringToFront(id);
       e.preventDefault();
     }
   };
@@ -50,18 +82,124 @@ function Window({ id, title, children, initialPosition, initialSize, module, onC
     if (isDragging) {
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
+      
+      // Detect snap zones while dragging
+      const windowWidth = size.width;
+      const windowHeight = size.height;
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+      
+      // Snap to left half of screen
+      if (newX < 20 && newY < 100) {
+        setSnapZone('left');
+      } 
+      // Snap to right half of screen
+      else if (newX + windowWidth > screenWidth - 20 && newY < 100) {
+        setSnapZone('right');
+      }
+      // Snap to top half of screen
+      else if (newY < 20) {
+        setSnapZone('top');
+      }
+      // Snap to bottom half of screen
+      else if (newY + windowHeight > screenHeight - 20) {
+        setSnapZone('bottom');
+      }
+      // Maximize when dragging to top
+      else if (newY < 5) {
+        setSnapZone(null);
+        onMaximize(id);
+      }
+      // No snapping
+      else {
+        setSnapZone(null);
+      }
+      
       setPosition({ x: newX, y: newY });
       e.preventDefault();
+    }
+    
+    if (isResizing) {
+      e.preventDefault();
+      const deltaX = e.clientX - resizeStartPos.x;
+      const deltaY = e.clientY - resizeStartPos.y;
+      
+      let newWidth = resizeStartSize.width;
+      let newHeight = resizeStartSize.height;
+      let newX = position.x;
+      let newY = position.y;
+      
+      // Handle resizing based on direction
+      if (resizeDirection.includes('e')) {
+        newWidth = Math.max(200, resizeStartSize.width + deltaX);
+      }
+      if (resizeDirection.includes('w')) {
+        newWidth = Math.max(200, resizeStartSize.width - deltaX);
+        newX = resizeStartPos.x + deltaX;
+      }
+      if (resizeDirection.includes('s')) {
+        newHeight = Math.max(100, resizeStartSize.height + deltaY);
+      }
+      if (resizeDirection.includes('n')) {
+        newHeight = Math.max(100, resizeStartSize.height - deltaY);
+        newY = resizeStartPos.y + deltaY;
+      }
+      
+      setSize({ width: newWidth, height: newHeight });
+      
+      if (resizeDirection.includes('w') || resizeDirection.includes('n')) {
+        setPosition({ x: newX, y: newY });
+      }
     }
   };
   
   const handleMouseUp = () => {
-    setIsDragging(false);
+    if (isDragging) {
+      setIsDragging(false);
+      
+      // Apply snapped state if in a snap zone
+      if (snapZone) {
+        if (snapZone === 'left') {
+          setPosition({ x: 0, y: 24 });
+          setSize({ width: window.innerWidth / 2, height: window.innerHeight - 24 });
+        } else if (snapZone === 'right') {
+          setPosition({ x: window.innerWidth / 2, y: 24 });
+          setSize({ width: window.innerWidth / 2, height: window.innerHeight - 24 });
+        } else if (snapZone === 'top') {
+          setPosition({ x: 0, y: 24 });
+          setSize({ width: window.innerWidth, height: (window.innerHeight - 24) / 2 });
+        } else if (snapZone === 'bottom') {
+          setPosition({ x: 0, y: 24 + (window.innerHeight - 24) / 2 });
+          setSize({ width: window.innerWidth, height: (window.innerHeight - 24) / 2 });
+        }
+      }
+    }
+    
+    if (isResizing) {
+      setIsResizing(false);
+      setResizeDirection(null);
+    }
+  };
+  
+  // Start resizing the window
+  const handleResizeStart = (e, direction) => {
+    e.preventDefault();
+    e.stopPropagation();
+    bringToFront(id);
+    setIsResizing(true);
+    setResizeDirection(direction);
+    setResizeStartPos({ x: e.clientX, y: e.clientY });
+    setResizeStartSize({ width: size.width, height: size.height });
   };
   
   // Activate window on click
   const handleWindowClick = () => {
-    setIsActive(true);
+    bringToFront(id);
+  };
+  
+  // Double click on header to maximize/restore
+  const handleHeaderDoubleClick = () => {
+    onMaximize(id);
   };
   
   // Add event listeners for dragging
@@ -73,13 +211,13 @@ function Window({ id, title, children, initialPosition, initialSize, module, onC
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragOffset]);
+  }, [isDragging, dragOffset, isResizing, resizeDirection]);
   
   // Create the window in a portal
   return createPortal(
     <div 
       ref={windowRef}
-      className={`optra-window ${isActive ? 'active' : ''}`}
+      className={windowClasses}
       style={{
         position: 'absolute',
         left: `${position.x}px`,
@@ -91,19 +229,85 @@ function Window({ id, title, children, initialPosition, initialSize, module, onC
       onMouseDown={handleMouseDown}
       onClick={handleWindowClick}
     >
-      <div ref={headerRef} className="optra-window-header">
-        <div className="optra-window-title">{title}</div>
+      <div ref={headerRef} className="optra-window-header" onDoubleClick={handleHeaderDoubleClick}>
         <div className="optra-window-controls">
-          <button className="optra-window-minimize" onClick={() => {}}></button>
-          <button className="optra-window-maximize" onClick={() => {}}></button>
-          <button className="optra-window-close" onClick={onClose}></button>
+          <button 
+            className="optra-window-close optra-window-control" 
+            onClick={() => onClose(id)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+          <button 
+            className="optra-window-minimize optra-window-control" 
+            onClick={() => onMinimize(id)}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <button 
+            className="optra-window-maximize optra-window-control" 
+            onClick={() => onMaximize(id)}
+          >
+            {isMaximized ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="15" y1="9" x2="15" y2="15"></line><line x1="9" y1="15" x2="15" y2="15"></line><line x1="9" y1="9" x2="9" y2="15"></line></svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            )}
+          </button>
         </div>
+        <div className="optra-window-title">{title}</div>
       </div>
-      <div className="optra-window-content" style={{ height: 'calc(100% - 36px)', overflow: 'auto' }}>
+      <div className="optra-window-content" style={{ height: 'calc(100% - 28px)', overflow: 'auto' }}>
         {children}
       </div>
+      
+      {/* Resize handles */}
+      <div className="optra-resize-handle-e" onMouseDown={(e) => handleResizeStart(e, 'e')}></div>
+      <div className="optra-resize-handle-w" onMouseDown={(e) => handleResizeStart(e, 'w')}></div>
+      <div className="optra-resize-handle-s" onMouseDown={(e) => handleResizeStart(e, 's')}></div>
+      <div className="optra-resize-handle-n" onMouseDown={(e) => handleResizeStart(e, 'n')}></div>
+      <div className="optra-resize-handle-se" onMouseDown={(e) => handleResizeStart(e, 'se')}></div>
+      <div className="optra-resize-handle-sw" onMouseDown={(e) => handleResizeStart(e, 'sw')}></div>
+      <div className="optra-resize-handle-ne" onMouseDown={(e) => handleResizeStart(e, 'ne')}></div>
+      <div className="optra-resize-handle-nw" onMouseDown={(e) => handleResizeStart(e, 'nw')}></div>
     </div>,
     document.getElementById('window-container')
+  );
+}
+
+// TabGroup component for tabbed windows
+function TabGroup({ windows, activeTabId, onTabChange, onTabClose, onTabAdd }) {
+  return (
+    <div className="optra-tab-group">
+      <div className="optra-tab-group-header">
+        {windows.map(window => (
+          <div 
+            key={window.id} 
+            className={`optra-tab ${window.id === activeTabId ? 'active' : ''}`}
+            onClick={() => onTabChange(window.id)}
+          >
+            {window.title}
+            <span className="optra-tab-close" onClick={(e) => {
+              e.stopPropagation();
+              onTabClose(window.id);
+            }}>×</span>
+          </div>
+        ))}
+        <div className="optra-tab-add" onClick={onTabAdd}>+</div>
+      </div>
+      <div className="optra-tab-group-content">
+        {windows.find(w => w.id === activeTabId)?.content}
+      </div>
+    </div>
+  );
+}
+
+// MinimizedWindow component
+function MinimizedWindow({ window, onRestore }) {
+  return (
+    <div className="optra-minimized-window" onClick={() => onRestore(window.id)}>
+      <div className="optra-minimized-title">{window.title}</div>
+      <div className="optra-minimized-content"></div>
+    </div>
   );
 }
 
@@ -191,7 +395,7 @@ function Chart({ data, ticker }) {
   const chartRef = React.useRef(null);
   
   useEffect(() => {
-    if (data && data.length > 0) {
+    if (data && data.length > 0 && chartRef.current) {
       // This is a placeholder for chart implementation
       // We'll typically use a library like Recharts, Chart.js, or D3.js
       const ctx = chartRef.current.getContext('2d');
@@ -376,6 +580,18 @@ function LogViewer() {
   );
 }
 
+// SecurityMonitor component (placeholder for now)
+function SecurityMonitor() {
+  return (
+    <div className="p-4">
+      <h2 className="text-xl mb-4">Security Monitor</h2>
+      <div className="bg-optra-darker p-4 rounded">
+        <p className="text-optra-light">Security monitoring module will be implemented in the next release.</p>
+      </div>
+    </div>
+  );
+}
+
 // MockData for development
 const mockMarketData = {
   macro: [
@@ -421,6 +637,9 @@ function App() {
   const [windows, setWindows] = useState([]);
   const [layouts, setLayouts] = useState([]);
   const [activeModule, setActiveModule] = useState(null);
+  const [tabGroups, setTabGroups] = useState([]);
+  const [minimizedWindows, setMinimizedWindows] = useState([]);
+  const [nextZIndex, setNextZIndex] = useState(100);
   
   // Load saved layouts on mount
   useEffect(() => {
@@ -451,7 +670,16 @@ function App() {
           title: window.title,
           module: window.module,
           position: window.position,
-          size: window.size
+          size: window.size,
+          isMaximized: window.isMaximized,
+          isMinimized: window.isMinimized
+        })),
+        tabGroups: tabGroups.map(group => ({
+          id: group.id,
+          tabs: group.tabs,
+          activeTabId: group.activeTabId,
+          position: group.position,
+          size: group.size
         }))
       }
     };
@@ -481,17 +709,29 @@ function App() {
       if (response.ok) {
         const layout = await response.json();
         
-        // Close all current windows
+        // Close all current windows and tab groups
         setWindows([]);
+        setTabGroups([]);
+        setMinimizedWindows([]);
         
         // Open windows from layout
         if (layout.layout && layout.layout.windows) {
           const newWindows = layout.layout.windows.map(window => ({
             ...window,
-            id: window.id || uuidv4()
+            id: window.id || uuidv4(),
+            zIndex: nextZIndex + windows.length
           }));
           
           setWindows(newWindows);
+          setNextZIndex(nextZIndex + newWindows.length);
+        }
+        
+        // Restore tab groups if they exist
+        if (layout.layout && layout.layout.tabGroups) {
+          setTabGroups(layout.layout.tabGroups.map(group => ({
+            ...group,
+            id: group.id || uuidv4()
+          })));
         }
       }
     } catch (error) {
@@ -505,10 +745,14 @@ function App() {
       id: uuidv4(),
       title,
       module,
-      position: initialPosition,
-      size: initialSize
+      position: initialPosition || { x: Math.random() * 100 + 50, y: Math.random() * 100 + 50 },
+      size: initialSize || { width: 800, height: 600 },
+      isMaximized: false,
+      isMinimized: false,
+      zIndex: nextZIndex
     };
     
+    setNextZIndex(nextZIndex + 1);
     setWindows([...windows, newWindow]);
     return newWindow.id;
   };
@@ -516,6 +760,98 @@ function App() {
   // Close a window
   const closeWindow = (windowId) => {
     setWindows(windows.filter(window => window.id !== windowId));
+    
+    // Also remove from minimized windows if it's there
+    setMinimizedWindows(minimizedWindows.filter(window => window.id !== windowId));
+  };
+  
+  // Minimize a window
+  const minimizeWindow = (windowId) => {
+    const windowToMinimize = windows.find(w => w.id === windowId);
+    if (windowToMinimize) {
+      // Add to minimized windows array
+      setMinimizedWindows([...minimizedWindows, {
+        id: windowId,
+        title: windowToMinimize.title,
+        module: windowToMinimize.module
+      }]);
+      
+      // Update window state
+      setWindows(windows.map(w => 
+        w.id === windowId 
+          ? {...w, isMinimized: true} 
+          : w
+      ));
+    }
+  };
+  
+  // Restore a minimized window
+  const restoreWindow = (windowId) => {
+    // Remove from minimized array
+    setMinimizedWindows(minimizedWindows.filter(w => w.id !== windowId));
+    
+    // Update window state and bring to front
+    setWindows(windows.map(w => 
+      w.id === windowId 
+        ? {...w, isMinimized: false, zIndex: nextZIndex} 
+        : w
+    ));
+    
+    setNextZIndex(nextZIndex + 1);
+  };
+  
+  // Maximize/restore a window
+  const toggleMaximize = (windowId) => {
+    setWindows(windows.map(w => 
+      w.id === windowId 
+        ? {...w, isMaximized: !w.isMaximized, zIndex: nextZIndex} 
+        : w
+    ));
+    
+    setNextZIndex(nextZIndex + 1);
+  };
+  
+  // Create a tab group with the given windows
+  const createTabGroup = (windowIds) => {
+    if (windowIds.length < 2) return;
+    
+    const windowsForGroup = windows.filter(w => windowIds.includes(w.id));
+    if (windowsForGroup.length < 2) return;
+    
+    const firstWindow = windowsForGroup[0];
+    const newTabGroup = {
+      id: uuidv4(),
+      tabs: windowsForGroup.map(w => ({
+        id: w.id,
+        title: w.title,
+        module: w.module
+      })),
+      activeTabId: firstWindow.id,
+      position: firstWindow.position,
+      size: firstWindow.size
+    };
+    
+    // Remove the windows from the windows array
+    setWindows(windows.filter(w => !windowIds.includes(w.id)));
+    
+    // Add the new tab group
+    setTabGroups([...tabGroups, newTabGroup]);
+  };
+  
+  // Close a tab group
+  const closeTabGroup = (groupId) => {
+    setTabGroups(tabGroups.filter(group => group.id !== groupId));
+  };
+  
+  // Bring a window to the front
+  const bringToFront = (windowId) => {
+    setWindows(windows.map(w => 
+      w.id === windowId 
+        ? {...w, zIndex: nextZIndex} 
+        : w
+    ));
+    
+    setNextZIndex(nextZIndex + 1);
   };
   
   // Open module windows
@@ -534,6 +870,11 @@ function App() {
     createWindow('log', 'Log Viewer', { x: 150, y: 150 }, { width: 900, height: 600 });
   };
   
+  const openSecurityModule = () => {
+    setActiveModule('security');
+    createWindow('security', 'Security Monitor', { x: 200, y: 200 }, { width: 700, height: 500 });
+  };
+  
   // Window content based on module
   const getWindowContent = (module) => {
     switch (module) {
@@ -541,17 +882,17 @@ function App() {
         return (
           <div className="p-4">
             <div className="mb-4">
-              <h2 className="text-xl mb-2">Macro</h2>
+              <h2 className="text-lg font-medium mb-2">Macro</h2>
               <MarketDataTable data={mockMarketData.macro} type="macro" />
             </div>
             
             <div className="mb-4">
-              <h2 className="text-xl mb-2">US</h2>
+              <h2 className="text-lg font-medium mb-2">US</h2>
               <MarketDataTable data={mockMarketData.us} type="sector" />
             </div>
             
             <div>
-              <h2 className="text-xl mb-2">Asia</h2>
+              <h2 className="text-lg font-medium mb-2">Asia</h2>
               <MarketDataTable data={mockMarketData.asia} type="sector" />
             </div>
           </div>
@@ -571,6 +912,13 @@ function App() {
           </div>
         );
         
+      case 'security':
+        return (
+          <div className="p-4 h-full">
+            <SecurityMonitor />
+          </div>
+        );
+        
       default:
         return <div>Unknown module</div>;
     }
@@ -580,7 +928,12 @@ function App() {
   const windowManagerValue = {
     windows,
     createWindow,
-    closeWindow
+    closeWindow,
+    minimizeWindow,
+    restoreWindow,
+    toggleMaximize,
+    bringToFront,
+    createTabGroup
   };
   
   // Data context value
@@ -589,64 +942,168 @@ function App() {
     chartData: mockChartData
   };
   
+  // Create a new layout with a prompt
+  const handleSaveLayout = () => {
+    const name = prompt('Enter a name for this layout:', 'My Layout');
+    if (name) {
+      const description = prompt('Enter a description (optional):', '');
+      saveLayout(name, description || '');
+    }
+  };
+  
   return (
     <WindowManagerContext.Provider value={windowManagerValue}>
       <DataContext.Provider value={dataValue}>
         <div className="app">
-          {/* Main app menu */}
-          <div className="optra-main-menu">
-            <div className="container mx-auto px-4 py-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="text-xl font-bold mr-8">optra</div>
-                  
-                  <div className="flex space-x-4">
-                    <div 
-                      className={`optra-main-menu-item ${activeModule === 'market' ? 'active' : ''}`}
-                      onClick={openMarketDataModule}
-                    >
-                      Market Data
-                    </div>
-                    <div 
-                      className={`optra-main-menu-item ${activeModule === 'chart' ? 'active' : ''}`}
-                      onClick={openChartModule}
-                    >
-                      Charts
-                    </div>
-                    <div 
-                      className={`optra-main-menu-item ${activeModule === 'log' ? 'active' : ''}`}
-                      onClick={openLogModule}
-                    >
-                      Logs
-                    </div>
-                  </div>
+          {/* macOS-like menu bar */}
+          <div className="optra-menu-bar">
+            <div className="optra-menu-logo">optra</div>
+            
+            <div className="optra-menu-item">
+              File
+              <div className="optra-dropdown-menu">
+                <div className="optra-dropdown-item" onClick={handleSaveLayout}>
+                  Save Layout
+                  <span className="optra-dropdown-shortcut">⌘S</span>
                 </div>
-                
-                <div className="flex items-center space-x-4">
-                  <div className="optra-main-menu-item" onClick={() => saveLayout('Default Layout')}>
-                    Save Layout
-                  </div>
-                  <div className="relative group">
-                    <div className="optra-main-menu-item">
-                      Load Layout
+                <div className="optra-dropdown-item">
+                  Save Layout As...
+                  <span className="optra-dropdown-shortcut">⇧⌘S</span>
+                </div>
+                <div className="optra-dropdown-divider"></div>
+                <div className="optra-dropdown-item">
+                  Export Data...
+                  <span className="optra-dropdown-shortcut">⌘E</span>
+                </div>
+                <div className="optra-dropdown-divider"></div>
+                <div className="optra-dropdown-item">
+                  Exit
+                  <span className="optra-dropdown-shortcut">⌘Q</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="optra-menu-item">
+              Edit
+              <div className="optra-dropdown-menu">
+                <div className="optra-dropdown-item">
+                  Cut
+                  <span className="optra-dropdown-shortcut">⌘X</span>
+                </div>
+                <div className="optra-dropdown-item">
+                  Copy
+                  <span className="optra-dropdown-shortcut">⌘C</span>
+                </div>
+                <div className="optra-dropdown-item">
+                  Paste
+                  <span className="optra-dropdown-shortcut">⌘V</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="optra-menu-item">
+              View
+              <div className="optra-dropdown-menu">
+                <div className="optra-dropdown-item">
+                  Zoom In
+                  <span className="optra-dropdown-shortcut">⌘+</span>
+                </div>
+                <div className="optra-dropdown-item">
+                  Zoom Out
+                  <span className="optra-dropdown-shortcut">⌘-</span>
+                </div>
+                <div className="optra-dropdown-divider"></div>
+                <div className="optra-dropdown-item">
+                  Toggle Dark Mode
+                </div>
+              </div>
+            </div>
+            
+            <div className="optra-menu-item">
+              Modules
+              <div className="optra-dropdown-menu">
+                <div 
+                  className={`optra-dropdown-item ${activeModule === 'market' ? 'active' : ''}`}
+                  onClick={openMarketDataModule}
+                >
+                  Market Data
+                </div>
+                <div 
+                  className={`optra-dropdown-item ${activeModule === 'chart' ? 'active' : ''}`}
+                  onClick={openChartModule}
+                >
+                  Chart
+                </div>
+                <div 
+                  className={`optra-dropdown-item ${activeModule === 'log' ? 'active' : ''}`}
+                  onClick={openLogModule}
+                >
+                  Log Viewer
+                </div>
+                <div 
+                  className={`optra-dropdown-item ${activeModule === 'security' ? 'active' : ''}`}
+                  onClick={openSecurityModule}
+                >
+                  Security Monitor
+                </div>
+              </div>
+            </div>
+            
+            <div className="optra-menu-item">
+              Layout
+              <div className="optra-dropdown-menu">
+                <div className="optra-dropdown-item" onClick={handleSaveLayout}>
+                  Save Current Layout
+                </div>
+                <div className="optra-dropdown-divider"></div>
+                {layouts.length > 0 ? (
+                  layouts.map(layout => (
+                    <div 
+                      key={layout.id} 
+                      className="optra-dropdown-item"
+                      onClick={() => loadLayout(layout.id)}
+                    >
+                      {layout.name}
                     </div>
-                    {layouts.length > 0 && (
-                      <div className="absolute left-0 mt-2 w-48 bg-optra-dark border border-optra-light rounded shadow-lg z-50 hidden group-hover:block">
-                        {layouts.map(layout => (
-                          <div 
-                            key={layout.id} 
-                            className="px-4 py-2 hover:bg-optra-darker cursor-pointer"
-                            onClick={() => loadLayout(layout.id)}
-                          >
-                            {layout.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                  ))
+                ) : (
+                  <div className="optra-dropdown-item" style={{ opacity: 0.5, cursor: 'default' }}>
+                    No saved layouts
                   </div>
-                  <div className="optra-main-menu-item">
-                    Settings
-                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="optra-menu-item">
+              Window
+              <div className="optra-dropdown-menu">
+                <div className="optra-dropdown-item">
+                  Tile All Windows
+                </div>
+                <div className="optra-dropdown-item">
+                  Cascade Windows
+                </div>
+                <div className="optra-dropdown-divider"></div>
+                <div className="optra-dropdown-item">
+                  Minimize All
+                </div>
+                <div className="optra-dropdown-item">
+                  Close All
+                </div>
+              </div>
+            </div>
+            
+            <div className="optra-menu-item">
+              Settings
+              <div className="optra-dropdown-menu">
+                <div className="optra-dropdown-item">
+                  Preferences
+                </div>
+                <div className="optra-dropdown-item">
+                  API Connections
+                </div>
+                <div className="optra-dropdown-item">
+                  Hotkeys
                 </div>
               </div>
             </div>
@@ -655,18 +1112,110 @@ function App() {
           {/* Window container */}
           <div className="optra-window-container">
             {windows.map(window => (
-              <Window
-                key={window.id}
-                id={window.id}
-                title={window.title}
-                initialPosition={window.position}
-                initialSize={window.size}
-                module={window.module}
-                onClose={() => closeWindow(window.id)}
-              >
-                {getWindowContent(window.module)}
-              </Window>
+              !window.isMinimized && (
+                <Window
+                  key={window.id}
+                  id={window.id}
+                  title={window.title}
+                  initialPosition={window.position}
+                  initialSize={window.size}
+                  module={window.module}
+                  isMaximized={window.isMaximized}
+                  isMinimized={window.isMinimized}
+                  onClose={closeWindow}
+                  onMinimize={minimizeWindow}
+                  onMaximize={toggleMaximize}
+                  bringToFront={bringToFront}
+                >
+                  {getWindowContent(window.module)}
+                </Window>
+              )
             ))}
+            
+            {/* Tab groups */}
+            {tabGroups.map(group => (
+              <div
+                key={group.id}
+                className="optra-tab-group"
+                style={{
+                  position: 'absolute',
+                  left: group.position.x,
+                  top: group.position.y,
+                  width: group.size.width,
+                  height: group.size.height,
+                  zIndex: 50 // Below normal windows
+                }}
+              >
+                <div className="optra-tab-group-header">
+                  {group.tabs.map(tab => (
+                    <div
+                      key={tab.id}
+                      className={`optra-tab ${tab.id === group.activeTabId ? 'active' : ''}`}
+                      onClick={() => {
+                        setTabGroups(tabGroups.map(g => 
+                          g.id === group.id 
+                            ? {...g, activeTabId: tab.id} 
+                            : g
+                        ));
+                      }}
+                    >
+                      {tab.title}
+                    </div>
+                  ))}
+                </div>
+                <div className="optra-tab-group-content">
+                  {getWindowContent(group.tabs.find(t => t.id === group.activeTabId)?.module)}
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Minimized windows */}
+          {minimizedWindows.length > 0 && (
+            <div className="optra-minimized-windows">
+              {minimizedWindows.map(window => (
+                <div 
+                  key={window.id} 
+                  className="optra-minimized-window"
+                  onClick={() => restoreWindow(window.id)}
+                >
+                  <div className="optra-minimized-title">{window.title}</div>
+                  <div className="optra-minimized-content" />
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Dock */}
+          <div className="optra-dock-container">
+            <div 
+              className={`optra-dock-item ${activeModule === 'market' ? 'active' : ''}`}
+              onClick={openMarketDataModule}
+              title="Market Data"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            </div>
+            <div 
+              className={`optra-dock-item ${activeModule === 'chart' ? 'active' : ''}`}
+              onClick={openChartModule}
+              title="Chart"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            </div>
+            <div 
+              className={`optra-dock-item ${activeModule === 'log' ? 'active' : ''}`}
+              onClick={openLogModule}
+              title="Log Viewer"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <div 
+              className={`optra-dock-item ${activeModule === 'security' ? 'active' : ''}`}
+              onClick={openSecurityModule}
+              title="Security Monitor"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
           </div>
         </div>
       </DataContext.Provider>
