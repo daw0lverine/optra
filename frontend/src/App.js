@@ -812,6 +812,7 @@ function App() {
   
   // Maximize/restore a window
   const toggleMaximize = (windowId) => {
+    console.log("Maximizing window:", windowId);
     setWindows(windows.map(w => 
       w.id === windowId 
         ? {...w, isMaximized: !w.isMaximized, zIndex: nextZIndex} 
